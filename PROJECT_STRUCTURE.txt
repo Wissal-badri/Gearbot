@@ -1,0 +1,65 @@
+=== Vue d’ensemble du projet ===
+Application full‑stack: frontend (Vite + React) et backend (Spring Boot). Le backend expose l’API de chat, lit le fichier data.json et applique des règles FR/EN. Le frontend affiche l’UI du chatbot Gear9.
+
+=== Backend (chatbot-backend) ===
+- pom.xml: Configuration Maven (Spring Boot 3, Java 17, plugins, dépendances web/validation/tests).
+- mvnw / mvnw.cmd: Wrapper Maven pour construire/lancer sans Maven global.
+- HELP.md: Aide générée par Spring (usage du plugin spring-boot:run, etc.).
+- data.json: Copie à la racine facultative du jeu de données (mêmes contenus que resources/data.json si présent).
+
+src/main/resources/
+- application.properties: Configuration appli (port 8080, nom appli, modèle Gemini, systemPrompt, JSON pretty print).
+- data.json: Données métier de Gear9 (nom, adresse, à‑propos, services, expertises, direction, projets, distinctions).
+
+src/main/java/com/example/chatbot/
+- ChatbotBackendApplication.java: Classe main Spring Boot (point d’entrée du serveur HTTP).
+
+src/main/java/com/example/chatbot/dto/
+- ChatRequest.java: DTO d’entrée { message, conversationId } pour POST /api/chat.
+- ChatResponse.java: DTO de sortie { reply } renvoyé par l’API.
+
+src/main/java/com/example/chatbot/service/
+- CompanyQaService.java: Coeur métier Q/R. 
+  - Parse la question, détecte l’intention (adresse, à‑propos, services, projets, expertises, direction, distinctions).
+  - Récupère les infos depuis resources/data.json.
+  - Gère la langue via paramètre isEnglish (réponses uniquement FR ou EN, sans mélange) et renvoie des réponses formatées Markdown.
+  - Fonction utilitaire buildContext(...) pour synthétiser un contexte compact (si appel LLM requis).
+- ConversationSessionService.java: Gestion de session côté serveur (détection de langue au 1er message, mémorisation par conversationId: "fr"/"en").
+- GeminiService.java: Intégration Gemini (génération/“translate”), avec gestion d’erreurs. Le contrôleur l’appelle en dernier recours.
+
+src/main/java/com/example/chatbot/web/
+- ChatController.java: Contrôleur REST.
+  - POST /api/chat: 
+    1) Détecte/retient la langue via ConversationSessionService
+    2) Tente une réponse déterministe via CompanyQaService
+    3) Fournit un fallback basique (hors LLM)
+    4) En dernier recours appelle GeminiService (et gère l’erreur quota proprement)
+- CorsConfig.java: CORS pour autoriser le frontend local (Vite) à appeler l’API backend.
+
+src/test/java/.../ChatbotBackendApplicationTests.java: Test de chargement du contexte Spring.
+
+target/: Sorties de build Maven (classes compilées, jar, rapports tests…)
+
+=== Frontend (chatbot-frontend) ===
+- package.json / package-lock.json: Dépendances (React, React Markdown, Vite), scripts (dev, build, preview).
+- vite.config.js: Configuration Vite (dev server, proxy éventuel si utilisé).
+- index.html: Point d’entrée HTML (monte l’app React et injecte les bundles Vite).
+
+src/
+- main.jsx: Bootstrap React (monte <App /> dans #root).
+- App.jsx: UI du chatbot Gear9.
+  - Ouverture/fermeture du panneau, affichage des messages, état de chargement, mise en forme Markdown.
+  - Envoi des messages à POST /api/chat avec { message, conversationId } (conversationId généré côté client pour figer la langue).
+  - Normalisation d’affichage (listes, mise en gras de "Gear9").
+- styles.css: Styles du site (layout, bulle chat, bouton, responsive…).
+- assets/*: Images (logo Gear9, icône d’envoi).
+
+=== Fils logiques (qui fait quoi) ===
+- Conversation: App.jsx → POST /api/chat → ChatController → (ConversationSessionService pour langue) → CompanyQaService (réponse déterministe depuis data.json) → ChatResponse.
+- Fallback LLM: seulement si la réponse déterministe est insuffisante; sinon message d’erreur clair si quota atteint.
+- Données: resources/data.json est la source unique (adresse, services, projets, distinctions…).
+
+=== Points importants ===
+- Langue: détectée au 1er message et conservée (FR ou EN) pour toute la conversation.
+- Réponses société (adresse, "what is Gear9", achievements, services, projets, expertises, direction): produites sans appel LLM, directement depuis data.json.
+- En cas d’erreur Gemini/quota: le contrôleur renvoie un message explicite ou un fallback pré-formaté.

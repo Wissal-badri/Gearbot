@@ -1,0 +1,394 @@
+{
+  "success": true,
+  "data": {
+    "nom_entreprise": "Agence de Transformation Digitale Gear9",
+    "apropos": "Régie Salesforce Digital",
+    "adresse": "219 Bd Zerktouni, angle Bd Brahim Roudani, Casablanca",
+    "apercu": "Gear9 est une agence marocaine de transformation digitale fondée en 2019. Elle se spécialise dans la mise en œuvre de la culture digitale, la création d'expériences digitales uniques et engageantes, et l'utilisation de la technologie et des données pour stimuler la croissance des entreprises. L'agence opère avec une méthodologie agile et innovante, se concentrant sur des domaines tels que la Culture et la Transformation Digitale, le Product Thinking, l'Expérience Client et l'Automatisation, ainsi que l'Analyse Comportementale.",
+    "services": [
+      {
+        "id": "salesforce",
+        "nom": "Salesforce",
+        "nom_en": "Salesforce",
+        "description": "Salesforce Sales Cloud Optimisez votre processus de vente pour atteindre plus de prospects et augmenter votre ROI",
+        "description_en": "Salesforce Sales Cloud Optimize your sales process to reach more prospects and increase your ROI",
+        "categorie": "Solutions Salesforce",
+        "ordre": 1
+      },
+      {
+        "id": "marketing_cloud",
+        "nom": "Marketing Cloud",
+        "nom_en": "Marketing Cloud",
+        "description": "Marketing Cloud Connectez vos différents réseaux – clients, partenaires, collaborateurs – pour des interactions optimales",
+        "description_en": "Marketing Cloud Connect your different networks – customers, partners, employees – for optimal interactions",
+        "categorie": "Solutions Salesforce",
+        "ordre": 2
+      },
+      {
+        "id": "mulesoft",
+        "nom": "MuleSoft",
+        "nom_en": "MuleSoft",
+        "description": "MuleSoft Connectez les données de tous vos systèmes pour des expériences personnalisées et en temps réel, grâce à MuleSoft et l'IA",
+        "description_en": "MuleSoft Connect data across all your systems for personalized, real-time experiences, powered by MuleSoft and AI",
+        "categorie": "Intégration",
+        "ordre": 3
+      },
+      {
+        "id": "tableau",
+        "nom": "Tableau",
+        "nom_en": "Tableau",
+        "description": "Tableau Connectez vos données Salesforce pour des insights rapides et une compréhension approfondie de vos clients",
+        "description_en": "Tableau Connect your Salesforce data for quick insights and a deeper understanding of your customers",
+        "categorie": "Analytics",
+        "ordre": 4
+      }
+    ],
+    "expertise_principale": [
+      {
+        "id": "sales_cloud",
+        "nom": "Sales Cloud",
+        "description": "Optimisation des processus de vente pour augmenter le ROI.",
+        "categorie": "Solutions Salesforce",
+        "categorie_id": 41
+      },
+      {
+        "id": "service_cloud",
+        "nom": "Service Cloud",
+        "description": "Conception d'un support client multicanal efficace.",
+        "categorie": "Solutions Salesforce",
+        "categorie_id": 41
+      },
+      {
+        "id": "developpement_culture_digitale",
+        "nom": "Développement de la culture digitale",
+        "description": null,
+        "categorie": "Transformation digitale",
+        "categorie_id": 42
+      },
+      {
+        "id": "programmes_formation_certification",
+        "nom": "Programmes de formation et certification",
+        "description": null,
+        "categorie": "Transformation digitale",
+        "categorie_id": 42
+      },
+      {
+        "id": "devsecops_systemes_evolutifs",
+        "nom": "Mise en œuvre de systèmes évolutifs et automatisés",
+        "description": null,
+        "categorie": "Approche DevSecOps",
+        "categorie_id": 43
+      },
+      {
+        "id": "plateformes_crm_ecommerce_applications",
+        "nom": "Construction de plateformes CRM, e-commerce et applications web/mobile",
+        "description": null,
+        "categorie": "Approche DevSecOps",
+        "categorie_id": 43
+      }
+    ],
+    "realisations_et_recompenses": [
+      {
+        "titre": "Meilleure Utilisation du CRO",
+        "annee": 2024,
+        "lieu": "Casablanca"
+      },
+      {
+        "titre": "Meilleur partenaire de l'année",
+        "annee": 2023,
+        "lieu": "Casablanca"
+      },
+      {
+        "titre": "Meilleur Design Web",
+        "annee": 2023,
+        "lieu": "Casablanca"
+      },
+      {
+        "titre": "Prix International du Marketing Automation",
+        "annee": 2023,
+        "lieu": "Casablanca"
+      }
+    ],
+    "projets": [
+      {
+        "secteur": "Secteur public",
+        "id": "groupe_ocp",
+        "nom": "Groupe OCP",
+        "type": "Salesforce",
+        "type_en": "Salesforce",
+        "description": null
+      },
+      {
+        "secteur": "Secteur public",
+        "id": "sorec",
+        "nom": "SOREC",
+        "type": "Stratégie de refonte des actifs digitaux",
+        "type_en": "Digital asset redesign strategy",
+        "description": null,
+        "url": "http://gear9.ma/projets/sorec-strategie-de-refonte-des-actifs-digitaux"
+      },
+      {
+        "secteur": "Finance",
+        "id": "bank_of_africa",
+        "nom": "Bank Of Africa",
+        "type": "Customer Experience digitale",
+        "type_en": "Digital Customer Experience",
+        "description": "Redéfinition de la Customer Experience digitale du groupe",
+        "description_en": "Redefinition of the group's digital customer journey",
+        "url": "http://gear9.ma/projets/bank-africa-redefinition-de-la-customer-experience-digitale-du-groupe"
+      },
+      {
+        "secteur": "Finance",
+        "id": "bank_alyousr",
+        "nom": "Bank Alyousr",
+        "type": "Marketing Automation",
+        "type_en": "Marketing Automation",
+        "description": "Consciente de ce challenge majeur, Bank Al Yousr…",
+        "description_en": "Addressing this major challenge, Bank Al Yousr…",
+        "url": "http://gear9.ma/projets/bank-alyousr-accompagnement-plateforme-marketing-automation"
+      },
+      {
+        "secteur": "Finance",
+        "id": "attijariwafa_bank",
+        "nom": "Attijariwafa Bank",
+        "type": "Digitalisation plateforme FIAD",
+        "type_en": "Digitalization of the FIAD platform",
+        "description": null,
+        "url": "http://gear9.ma/projets/attijariwafa-bank-digitalisation-plateforme-fiad"
+      },
+      {
+        "secteur": "Finance",
+        "id": "bmce_capital_bourse",
+        "nom": "BMCE Capital Bourse",
+        "type": "Plateforme de gestion d'activité boursière",
+        "type_en": "Stock market activity management platform",
+        "description": null
+      },
+      {
+        "secteur": "Finance",
+        "id": "bank_ai_maghrib",
+        "nom": "Bank AI Maghrib",
+        "type": "FinTech",
+        "description": "Plateforme de gestion de l'activité Fintech"
+      },
+      {
+        "secteur": "Assurance",
+        "id": "saham",
+        "nom": "SAHAM",
+        "type": "Self care client",
+        "description": "Réalisation des … intégration en temps réel du tracking GPS de l’assistance auto…"
+      },
+      {
+        "secteur": "Assurance",
+        "id": "la_marocaine_vie",
+        "nom": "La Marocaine Vie",
+        "type": "Refonte plateforme d'adhésion",
+        "description": null,
+        "url": "http://gear9.ma/projets/la-marocaine-vie-refonte-de-la-plateforme-dadhesion-lmv-0"
+      },
+      {
+        "secteur": "Assurance",
+        "id": "rma",
+        "nom": "RMA",
+        "type": "Digitalisation process métiers",
+        "description": "Accompagner RMA Assurance… à travers plusieurs plateformes internes et externes."
+      },
+      {
+        "secteur": "Assurance",
+        "id": "cimr",
+        "nom": "CIMR",
+        "type": "Digitalisation de l'entrée en relation",
+        "description": null,
+        "url": "http://gear9.ma/projets/cimr-digitalisation-de-lentree-en-relation"
+      },
+      {
+        "secteur": "Assurance",
+        "id": "myaxa",
+        "nom": "MyAXA Maroc & CIMA",
+        "type": "Refonte application",
+        "description": null,
+        "url": "http://gear9.ma/projets/muakha-refonte-de-lapplication-myaxa-maroc-cima"
+      },
+      {
+        "secteur": "Télécom",
+        "id": "badeel",
+        "nom": "Badeel",
+        "type": "UX Design & Plateforme",
+        "description": "Des améliorations significatives…"
+      },
+      {
+        "secteur": "Télécom",
+        "id": "inwi",
+        "nom": "inwi",
+        "type": "Digitalisation produits et services",
+        "description": "Nous avons exploré de nouvelles technologies…",
+        "url": "http://gear9.ma/projets/inwi-digitalisation-des-produits-et-services"
+      },
+      {
+        "secteur": "Télécom",
+        "id": "win",
+        "nom": "win",
+        "type": "Plateformes Web et Mobiles",
+        "description": "Produit 100% digital…",
+        "url": "http://gear9.ma/projets/win-mise-en-place-des-plateformes-web-et-mobiles"
+      },
+      {
+        "secteur": "Retail",
+        "id": "epicerie_verte",
+        "nom": "Epicerie Verte",
+        "type": "CX e-commerce",
+        "description": null,
+    "url": "http://gear9.ma/projets/cimr-digitalisation-de-lentree-en-relation"
+      },
+      {
+        "secteur": "Retail",
+        "id": "carrefour_partner_program",
+        "nom": "Carrefour Partner Program",
+        "type": "Programme Partenaires",
+        "description": null
+      },
+      {
+        "secteur": "Retail",
+        "id": "marjane_mall",
+        "nom": "Marjane Mall",
+        "type": "Optimisation conversion",
+        "description": null
+      },
+      {
+        "secteur": "Industrie",
+        "id": "toyota",
+        "nom": "Toyota",
+        "type": "Transformation digitale intégrale",
+        "description": "Toyota du Maroc… première webstore automobile…",
+        "url": "http://gear9.ma/projets/toyota-transformation-digitale-integrale-de-lexperience-client"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "philip_morris",
+        "nom": "Philip Morris International",
+        "type": "Digitalisation process relationnels",
+        "description": null,
+        "url": "http://gear9.ma/projets/philip-morris-international-digitalisation-des-process-relationnels"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "one_kitchen",
+        "nom": "One Kitchen",
+        "type": "Automatisation gestion cuisine virtuelle",
+        "description": "L'expérience digitale…",
+        "url": "http://gear9.ma/projets/one-kitchen-automatisation-de-gestion-et-de-pilotage-dune-cuisine-virtuelle"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "vivo_energy",
+        "nom": "Vivo Energy",
+        "type": "Refonte UX",
+        "description": null,
+        "url": "http://gear9.ma/projets/vivo-energy-refonte-dexperience-utilisateur"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "lafargeholcim",
+        "nom": "LafargeHolcim",
+        "type": "Digital Customer Discovery",
+        "description": null,
+        "url": "http://gear9.ma/projets/lafargeholcim-digital-customer-discovery"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "changan",
+        "nom": "CHANGAN",
+        "type": "Digitalisation produit",
+        "description": null,
+        "url": "http://gear9.ma/projets/changan-digitalisation-produit"
+      },
+      {
+        "secteur": "Industrie",
+        "id": "lexus",
+        "nom": "Lexus",
+        "type": "Business et Marketing Automation",
+        "description": null
+      },
+      {
+        "secteur": "Education",
+        "id": "fondation_ibn_rochd",
+        "nom": "Fondation Ibn Rochd",
+        "type": "Digitalisation de process",
+        "description": null,
+        "url": "http://gear9.ma/projets/fondation-ibn-rochd-digitalisation-de-process"
+      },
+      {
+        "secteur": "Education",
+        "id": "xii_school",
+        "nom": "XII School",
+        "type": "Selfcare programmes éducatifs",
+        "description": null,
+        "url": "http://gear9.ma/projets/xii-school-selfcare-de-programmes-educatifs"
+      },
+      {
+        "secteur": "Hôtellerie",
+        "id": "kenzi_hotels",
+        "nom": "Kenzi Hotels Group",
+        "type": "Salesforce",
+        "description": null
+      },
+      {
+        "secteur": "Immobilier",
+        "id": "eagle_hills",
+        "nom": "Eagle Hills",
+        "type": "Développement immobilier",
+        "description": null
+      },
+      {
+        "secteur": "Immobilier",
+        "id": "addoha_afrique",
+        "nom": "Addoha Afrique",
+        "type": "Business et Marketing Automation",
+        "description": null
+      }
+    ],
+    "direction": [
+      {
+        "role": "PDG",
+        "nom": "Mounir Bouchiha",
+        "bio": "Un entrepreneur chevronné avec plus de 15 ans d'expérience dans la transformation digitale. Il a dirigé des projets majeurs chez inwi et d'autres organisations, en se concentrant sur la création d'expériences digitales personnalisées et la rupture des silos organisationnels."
+      }
+    ],
+    "expertise": [
+      {
+        "id": "salesforce",
+        "nom": "Salesforce",
+        "details": [
+          { "id": "sales_cloud", "nom": "Sales Cloud", "description": "Optimisez votre processus de vente pour toucher plus de prospects et augmenter votre ROI." },
+          { "id": "service_cloud", "nom": "Service Cloud", "description": "Concevez un support client multicanal rapide et efficace pour améliorer la relation client." },
+          { "id": "marketing_cloud", "nom": "Marketing Cloud", "description": "Connectez vos différents réseaux – clients, partenaires, collaborateurs – pour des interactions optimales." },
+          { "id": "data_cloud", "nom": "Data Cloud", "description": "Unifiez vos données clients avec Data Cloud pour des insights en temps réel, à chaque point de contact." },
+          { "id": "mulesoft", "nom": "MuleSoft", "description": "Connectez les données de tous vos systèmes pour des expériences personnalisées et en temps réel, grâce à MuleSoft et l'IA." },
+          { "id": "tableau", "nom": "Tableau", "description": "Connectez vos données Salesforce pour des insights rapides et une compréhension approfondie de vos clients." }
+        ]
+      },
+      {
+        "id": "regie",
+        "nom": "Régie",
+        "details": [
+          { "id": "architecture", "nom": "Architecture", "description": "Expérience dans le Cloud, maîtrise de l'approche WOA et SOA." },
+          { "id": "data", "nom": "Data", "description": "Compréhension approfondie du Big Data, expertise en bases de données NoSQL et en gestion des données." },
+          { "id": "developpement", "nom": "Développement", "description": "Maîtrise des différents langages de programmation et aptitudes avancées en développement." },
+          { "id": "agilite", "nom": "Agilité", "description": "Savoir-faire en Agilité, compétences en Management du SI et excellence en modélisation." },
+          { "id": "front_mobile", "nom": "Front/Mobile", "description": "Compétences de pointe en Développement et maîtrise du langage JavaScript." }
+        ]
+      },
+      {
+        "id": "digital",
+        "nom": "Digital",
+        "details": [
+          { "id": "culture_transformation", "nom": "Culture Digitale & Transformation", "description": "Développement de la culture digitale, formation & certification, organisation, veille innovation..." },
+          { "id": "product_cx_automation", "nom": "Product Thinking, CX & Automation", "description": "Product Thinking, Personae, Prototyping, User interface, User experience, Marketing automation..." },
+          { "id": "accompagnement_technologique", "nom": "Accompagnement Technologique", "description": "Plateforme CRM, Plateforme e-commerce, API digitale, Application mobile, Application web..." },
+          { "id": "analyse_comportementale", "nom": "Analyse Comportementale", "description": "Tracking, Analyse de la performance, Crashlytics, Test Lab, Event, Audience, Funnel, Prédiction, AB Testing..." },
+          { "id": "methodologie_agile", "nom": "Méthodologie Agile", "description": "Méthode Agile, Test & Learn, Pilotage par la valeur, Feedback et adaptation, Prise de décision rapide..." }
+        ]
+      }
+    ]
+  }
+}
