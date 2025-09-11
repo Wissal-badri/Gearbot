@@ -260,12 +260,38 @@ public class CompanyQaService {
                                 }
                             }
                         }
+                        // Ensure English queries include some project detail even if *_en fields are missing
+                        if (isEnglish && type == null && desc == null) {
+                            String secteurName = textOrNull(p.path("secteur"));
+                            if (secteurName != null) {
+                                type = secteurName;
+                            }
+                            if (desc == null) {
+                                String url = textOrNull(p.path("url"));
+                                if (url != null) desc = url;
+                            }
+                        }
+
                         List<String> parts = new ArrayList<>();
                         if (nom != null) parts.add(nom);
                         if (type != null) parts.add(type);
                         if (desc != null) parts.add(desc);
+                        // As a last resort, if only the name is present, add sector to provide detail
+                        if (isEnglish && parts.size() == 1) {
+                            String secteurName = textOrNull(p.path("secteur"));
+                            if (secteurName != null) {
+                                parts.add(secteurName);
+                            } else {
+                                parts.add("Project");
+                            }
+                        }
+                        // Ensure at least two fields for English readability
+                        if (isEnglish && parts.size() == 1) {
+                            parts.add("Project details unavailable");
+                        }
                         if (!parts.isEmpty()) {
-                            String line = "- " + String.join(" — ", parts);
+                            String separator = isEnglish ? " - " : " — ";
+                            String line = "- " + String.join(separator, parts);
                             items.add(line);
                         }
                     }
@@ -275,7 +301,7 @@ public class CompanyQaService {
                     if (items.size() > 6) {
                         items = items.subList(0, 6);
                     }
-                    String header = isEnglish ? "Some **Gear9** clients/projects" : "Quelques clients/projets de **Gear9**";
+                    String header = isEnglish ? "Clients of **Gear9** and their projects" : "Quelques clients/projets de **Gear9**";
                     if (secteurFilter != null) header += isEnglish ? " (sector: " + secteurFilter + ")" : " (secteur: " + secteurFilter + ")";
                     header += isEnglish ? ":\n" : " :\n";
                     return header + String.join("\n", items);
