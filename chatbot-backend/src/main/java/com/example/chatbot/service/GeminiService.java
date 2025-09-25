@@ -188,6 +188,64 @@ public class GeminiService {
         return text;
     }
 
+    /**
+     * Reformulate a JSON-derived draft into a natural, fluent response in the requested language
+     * without adding new facts. If API key is missing or any error occurs, returns the original text.
+     */
+    public String reformulate(String text, String preferredLanguage) {
+        if (text == null || text.isBlank()) return text;
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            return text;
+        }
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+        String langInstr = (preferredLanguage != null && preferredLanguage.equalsIgnoreCase("en"))
+                ? "Rewrite in clear, fluent English. Use ONLY the information provided. Do not invent or add facts. Merge bullet lists into well-structured sentences or short paragraphs when it improves readability. Preserve brand Markdown like **Gear9**."
+                : "Réécris en français clair et fluide. Utilise UNIQUEMENT les informations fournies. N'invente ni n'ajoute aucun fait. Transforme les listes en phrases ou courts paragraphes lorsque cela améliore la lisibilité. Préserve le Markdown de marque comme **Gear9**.";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("system_instruction", Map.of(
+                "parts", List.of(Map.of("text", systemPrompt))
+        ));
+
+        Map<String, Object> userContent = new HashMap<>();
+        userContent.put("role", "user");
+        userContent.put("parts", List.of(Map.of("text", langInstr + "\n\nText:\n" + text)));
+        body.put("contents", List.of(userContent));
+
+        body.put("generationConfig", Map.of(
+                "temperature", 0.3,
+                "topP", 0.9,
+                "topK", 40
+        ));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("x-goog-api-key", geminiApiKey);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return text;
+            }
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode candidates = root.path("candidates");
+            if (candidates.isArray() && candidates.size() > 0) {
+                JsonNode parts = candidates.get(0).path("content").path("parts");
+                if (parts.isArray() && parts.size() > 0) {
+                    String rewritten = parts.get(0).path("text").asText();
+                    String cleaned = cleanResponse(rewritten);
+                    return (cleaned != null && !cleaned.isBlank()) ? cleaned : text;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return text;
+    }
+
     private String cleanResponse(String text) {
         if (text == null) return "";
         String cleaned = text.trim();

@@ -8,17 +8,42 @@ const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && impor
 const BACKEND_URL = `${API_BASE.replace(/\/$/, '')}/api/chat`
 
 export default function App() {
+  const [lang, setLang] = useState('FR')
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [isFull, setIsFull] = useState(false)
-  const [messages, setMessages] = useState([
-    { sender: 'bot', text: `Bonjour ! J'espère que vous allez bien.
+  const initialGreetings = {
+    FR: `Bonjour ! J'espère que vous allez bien.
 
-Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre à vos questions sur l'entreprise (adresse, services, projets, clients, distinctions, expertises, etc.).` }
+Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre à vos questions sur l'entreprise (adresse, services, projets, clients, distinctions, expertises, etc.).`,
+    EN: `Hello! I hope you are doing well.
+
+I am **Gear9**'s chatbot and I am here to answer your questions about the company (address, services, projects, clients, awards, expertise, etc.).`
+  }
+  const [messages, setMessages] = useState([
+    { sender: 'bot', text: initialGreetings[lang] }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [conversationId] = useState(() => generateConversationId())
+  const [subjects, setSubjects] = useState([])
+  const curatedChips = lang === 'FR'
+    ? [
+      { label: "C'est quoi Gear9 ?", prompt: "C'est quoi Gear9 ?" },
+      { label: 'Adresse', prompt: 'Adresse' },
+      { label: 'Clients de Gear9', prompt: 'Clients de Gear9' },
+      { label: "Expertise en Salesforce", prompt: "Parlez-moi de Gear9 en Salesforce" },
+      { label: "Expertise en digital", prompt: "Parlez-moi de Gear9 en digital" },
+      { label: 'Les réalisations et distinctions de Gear9', prompt: 'Parlez-moi des réalisations et distinctions de Gear9' }
+    ]
+    : [
+      { label: 'Tell me about Gear9', prompt: 'Tell me about Gear9' },
+      { label: 'Address', prompt: 'Address' },
+      { label: 'Gear9 clients', prompt: 'Gear9 clients' },
+      { label: "Gear9’s expertise in Salesforce", prompt: "What is Gear9's expertise in Salesforce?" },
+      { label: "Gear9’s expertise in Digital", prompt: "What is Gear9's expertise in digital?" },
+      { label: "Gear9's awards and achievements", prompt: "Gear9 awards and achievements" }
+    ]
   const inputRef = useRef(null)
   const messagesRef = useRef(null)
   const endRef = useRef(null)
@@ -108,6 +133,26 @@ Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre �
     })
   }, [messages, loading])
 
+  // When language changes: update welcome if user has not interacted yet
+  useEffect(() => {
+    if (messages.length === 1 && messages[0]?.sender === 'bot') {
+      setMessages([{ sender: 'bot', text: initialGreetings[lang] }])
+    }
+  }, [lang])
+
+  
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const res = await fetch(`${API_BASE.replace(/\/$/, '')}/api/chat/subjects`)
+        if (!res.ok) return
+        const list = await res.json()
+        if (Array.isArray(list)) setSubjects(list)
+      } catch {}
+    }
+    loadSubjects()
+  }, [])
+
   async function sendMessage(e) {
     e.preventDefault()
     const trimmed = input.trim()
@@ -124,7 +169,8 @@ Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre �
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: trimmed,
-          conversationId: conversationId
+          conversationId: conversationId,
+          language: lang === 'FR' ? 'fr' : 'en'
         })
       })
       if (!res.ok) throw new Error('Server error')
@@ -137,6 +183,31 @@ Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre �
     } finally {
       setLoading(false)
       // Return focus to input for rapid consecutive messages
+      setTimeout(() => inputRef.current && inputRef.current.focus(), 0)
+    }
+  }
+
+  // Clickable quick-reply chip
+  async function sendQuickPrompt(phr) {
+    // Immediately send without extra click
+    setMessages(prev => [...prev, { sender: 'user', text: phr }])
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: phr, conversationId, language: lang === 'FR' ? 'fr' : 'en' })
+      })
+      if (!res.ok) throw new Error('Server error')
+      const data = await res.json()
+      const reply = data.reply ?? 'No reply'
+      setMessages(prev => [...prev, { sender: 'bot', text: normalizeFormatting(reply) }])
+    } catch (err) {
+      setError('Failed to get response from server.')
+      setMessages(prev => [...prev, { sender: 'bot', text: 'Désolé, j\'ai rencontré un problème.' }])
+    } finally {
+      setLoading(false)
       setTimeout(() => inputRef.current && inputRef.current.focus(), 0)
     }
   }
@@ -165,21 +236,29 @@ Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre �
       </button>
 
       {isChatOpen && (
-        <div className={isFull ? "chat-overlay" : "chat-panel"} role="dialog" aria-modal="true" aria-label="Chatbot interne Gear9">
+        <div className={isFull ? "chat-overlay" : "chat-panel"} role="dialog" aria-modal="true" aria-label={lang === 'FR' ? 'Chatbot interne Gear9' : 'Gear9 internal chatbot'}>
           <div className="chat-header-bar">
-            <div className="chat-title">GearBot — Chatbot interne Gear9</div>
+            <div className="chat-title">{lang === 'FR' ? 'GearBot — Chatbot interne Gear9' : 'GearBot — Gear9 internal chatbot'}</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="chat-action" title={isFull ? 'Réduire' : 'Plein écran'} onClick={() => setIsFull(v => !v)}>{isFull ? '▭' : '⤢'}</button>
+              <button className="chat-action" title={lang === 'FR' ? 'Changer de langue' : 'Switch language'} onClick={() => setLang(l => l === 'FR' ? 'EN' : 'FR')}>{lang === 'FR' ? 'EN' : 'FR'}</button>
+              <button className="chat-action" title={isFull ? (lang === 'FR' ? 'Réduire' : 'Exit full screen') : (lang === 'FR' ? 'Plein écran' : 'Full screen')} onClick={() => setIsFull(v => !v)}>{isFull ? '▭' : '⤢'}</button>
               <button className="chat-close" aria-label="Fermer" onClick={() => setIsChatOpen(false)}>×</button>
             </div>
           </div>
           <div className="messages" id="messages" ref={messagesRef} aria-live="polite">
             {messages.map((m, idx) => (
               <div key={idx} className={`bubble ${m.sender === 'user' ? 'user' : 'bot'}`}>
-                <span className="meta">{m.sender === 'user' ? 'Vous' : 'GearBot'}</span>
+                <span className="meta">{m.sender === 'user' ? (lang === 'FR' ? 'Vous' : 'You') : 'GearBot'}</span>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.sender === 'bot' ? formatBotText(m.text) : emphasizeBrand(m.text)}</ReactMarkdown>
               </div>
             ))}
+            {curatedChips.length > 0 && (
+              <div className="chips" aria-label={lang === 'FR' ? 'Suggestions rapides' : 'Quick suggestions'}>
+                {curatedChips.map((c, i) => (
+                  <button key={i} type="button" className="chip" onClick={() => sendQuickPrompt(c.prompt)}>{c.label}</button>
+                ))}
+              </div>
+            )}
             {loading && (
               <div className="bubble bot">
                 <span className="meta">GearBot</span>
@@ -192,15 +271,15 @@ Je suis le chatbot de **Gear9** et je suis à votre disposition pour répondre �
           <form className="composer" onSubmit={sendMessage}>
             <input
               className="input"
-              placeholder="Écrivez votre message..."
+              placeholder={lang === 'FR' ? 'Écrivez votre message...' : 'Type your message...'}
               value={input}
               onChange={e => setInput(e.target.value)}
               disabled={loading}
               ref={inputRef}
               autoFocus
             />
-            <button className="send" type="submit" disabled={loading} aria-label="Envoyer">
-              <img src={SendIcon} width={20} height={20} alt="Envoyer" />
+            <button className="send" type="submit" disabled={loading} aria-label={lang === 'FR' ? 'Envoyer' : 'Send'}>
+              <img src={SendIcon} width={20} height={20} alt={lang === 'FR' ? 'Envoyer' : 'Send'} />
             </button>
           </form>
 

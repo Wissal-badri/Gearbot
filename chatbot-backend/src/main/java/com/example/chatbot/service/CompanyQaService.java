@@ -10,8 +10,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 @Service
 public class CompanyQaService {
@@ -60,7 +65,13 @@ public class CompanyQaService {
                 : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
         }
 
-        final String question = questionRaw.toLowerCase(Locale.ROOT);
+        final String question = normalize(questionRaw);
+
+        // Alias-based fast-path from data.subjects.aliases
+        String aliasAnswer = tryAliasMatch(question, isEnglish);
+        if (aliasAnswer != null) {
+            return aliasAnswer;
+        }
 
         // Identity: answer regardless of leading fillers (hey/ay/hi) or minor variations
         if (isIdentityQuery(question)) {
@@ -112,11 +123,16 @@ public class CompanyQaService {
         }
 
         // 1) Adresse / localisation
-        if (containsAny(question,
-                // FR
-                "adresse", "localisation", "où", "ou", "située", "situee", "siège", "siege", "siège social",
-                // EN
-                "address", "where", "location", "located", "headquarters", "hq", "office", "offices", "head office")) {
+        // Use word-boundary matching for short tokens like "ou" to avoid matching inside English words (e.g., "about")
+        boolean askAddress =
+                containsAny(question,
+                    // FR (long tokens)
+                    "adresse", "localisation", "située", "situee", "siège", "siege", "siège social",
+                    // EN
+                    "address", "location", "located", "headquarters", "hq", "office", "offices", "head office")
+                || containsAnyWord(question, "où", "ou", "where");
+
+        if (askAddress) {
             String adresse = textOrNull(data.path("adresse"));
             if (adresse != null) {
                 String header = isEnglish ? "Address of **Gear9**:\n" : "Adresse de **Gear9**:\n";
@@ -138,38 +154,62 @@ public class CompanyQaService {
             }
         }
 
-        // 3) À propos / aperçu
-        if (containsAny(question, "à propos", "apropos", "apercu", "présentation", "presentation", "que fait", "qui est", "quoi fait", "c'est quoi", "what is",
-                "about", "overview", "what do you do", "who is")) {
-            
-            // Provide direct responses without any API calls
-            if (isEnglish) {
-                return "**Gear9** is a Moroccan digital transformation agency founded in 2019. We specialize in implementing digital culture, creating unique and engaging digital experiences, and using technology and data to drive business growth. We operate with an agile and innovative methodology, focusing on areas such as Digital Culture and Transformation, Product Thinking, Customer Experience and Automation, as well as Behavioral Analysis.";
-            } else {
-                return "**Gear9** est une agence marocaine de transformation digitale fondée en 2019. Elle se spécialise dans la mise en œuvre de la culture digitale, la création d'expériences digitales uniques et engageantes, et l'utilisation de la technologie et des données pour stimuler la croissance des entreprises. L'agence opère avec une méthodologie agile et innovante, se concentrant sur des domaines tels que la Culture et la Transformation Digitale, le Product Thinking, l'Expérience Client et l'Automatisation, ainsi que l'Analyse Comportementale.";
+        // 3) À propos / aperçu — FR: C'est quoi Gear9 ?; EN: Tell me about Gear9
+        if (containsAny(question,
+                // FR
+                "c'est quoi gear9", "c est quoi gear9", "que fait gear9", "qui est gear9",
+                // EN
+                "tell me about gear9")) {
+
+            // If the query also mentions a specific topic (e.g., Salesforce),
+            // defer the generic about answer so specific handlers can respond.
+            boolean mentionsSpecificTopic = containsAny(question,
+                    // Salesforce stack
+                    "salesforce", "sales cloud", "service cloud", "marketing cloud", "data cloud", "mulesoft", "tableau",
+                    // Other expertise groups / topics
+                    "digital", "product thinking", "customer experience", "automation", "régie", "regie", "staff augmentation");
+
+            if (!mentionsSpecificTopic) {
+                // Provide direct responses without any API calls
+                if (isEnglish) {
+                    return "**Gear9** is a Moroccan digital transformation agency founded in 2019. We specialize in implementing digital culture, creating unique and engaging digital experiences, and using technology and data to drive business growth. We operate with an agile and innovative methodology, focusing on areas such as Digital Culture and Transformation, Product Thinking, Customer Experience and Automation, as well as Behavioral Analysis.";
+                } else {
+                    return "**Gear9** est une agence marocaine de transformation digitale fondée en 2019. Elle se spécialise dans la mise en œuvre de la culture digitale, la création d'expériences digitales uniques et engageantes, et l'utilisation de la technologie et des données pour stimuler la croissance des entreprises. L'agence opère avec une méthodologie agile et innovante, se concentrant sur des domaines tels que la Culture et la Transformation Digitale, le Product Thinking, l'Expérience Client et l'Automatisation, ainsi que l'Analyse Comportementale.";
+                }
             }
+            // else: continue to specific expertise/services handling below
         }
 
         // 4) Services / offres
         if (containsAny(question, "service", "offre", "proposez", "proposés", "proposes",
-                "service", "services", "offer", "offers", "offering", "offerings", "what do you offer")) {
+                "services", "offer", "offers", "offering", "offerings", "what do you offer", "what services")) {
             JsonNode services = data.path("services");
             if (services.isArray() && services.size() > 0) {
-                List<String> items = new ArrayList<>();
+                List<String> names = new ArrayList<>();
+                List<String> snippets = new ArrayList<>();
+                int count = 0;
                 for (JsonNode s : services) {
                     String nom = textOrNullLang(s, "nom", isEnglish);
                     String description = textOrNullLang(s, "description", isEnglish);
-                    if (nom != null && description != null) {
-                        String line = "- **" + nom + "**: " + description;
-                        items.add(line);
-                    } else if (nom != null) {
-                        String line = "- **" + nom + "**";
-                        items.add(line);
+                    if (nom != null) {
+                        names.add(nom);
+                        if (description != null) {
+                            snippets.add(nom + ": " + description);
+                        }
+                        count++;
+                        if (count >= 4) break;
                     }
                 }
-                if (!items.isEmpty()) {
-                    String header = isEnglish ? "Services offered by **Gear9**:" : "Les services proposés par **Gear9** sont :";
-                    return header + "\n" + String.join("\n", items);
+                if (!names.isEmpty()) {
+                    String joined = joinWithAnd(names, isEnglish);
+                    String lead = isEnglish ? "Gear9 offers services such as " : "Gear9 propose des services tels que ";
+                    String sentence = lead + joined + ".";
+                    if (!snippets.isEmpty()) {
+                        String examplesLead = isEnglish ? " For example: " : " Par exemple : ";
+                        String examples = String.join(isEnglish ? "; " : "; ", snippets);
+                        sentence += examplesLead + examples + ".";
+                    }
+                    return ensureEnglish(sentence, isEnglish);
                 }
             }
             return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
@@ -182,12 +222,11 @@ public class CompanyQaService {
                 JsonNode d = direction.get(0);
                 String role = textOrNull(d.path("role"));
                 String nom = textOrNull(d.path("nom"));
-                List<String> parts = new ArrayList<>();
-                if (role != null) parts.add(role);
-                if (nom != null) parts.add(nom);
-                if (!parts.isEmpty()) {
-                    String header = isEnglish ? "Leadership of **Gear9**:" : "Direction de **Gear9**:";
-                    return header + "\n- " + String.join(" — ", parts);
+                if (role != null || nom != null) {
+                    String out = isEnglish
+                            ? ("Gear9 is led by " + (role != null ? role + " " : "") + (nom != null ? nom : "") + ".")
+                            : ("Gear9 est dirigée par " + (role != null ? role + " " : "") + (nom != null ? nom : "") + ".");
+                    return ensureEnglish(out, isEnglish);
                 }
             }
             return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
@@ -198,19 +237,32 @@ public class CompanyQaService {
                 "award", "awards", "achievement", "achievements", "rewards")) {
             JsonNode rr = data.path("realisations_et_recompenses");
             if (rr.isArray() && rr.size() > 0) {
-                List<String> items = new ArrayList<>();
+                Integer fromYear = extractYear(question);
+                List<String> phrases = new ArrayList<>();
                 for (JsonNode r : rr) {
+                    int year = r.path("annee").isMissingNode() ? -1 : r.path("annee").asInt();
+                    if (fromYear != null && year != -1 && year < fromYear) {
+                        continue; // skip items before the requested year
+                    }
                     List<String> parts = new ArrayList<>();
                     String titre = textOrNull(r.path("titre"));
                     if (titre != null) parts.add(titre);
-                    if (!r.path("annee").isMissingNode()) parts.add(String.valueOf(r.path("annee").asInt()));
+                    if (year != -1) parts.add(String.valueOf(year));
                     String lieu = textOrNull(r.path("lieu"));
                     if (lieu != null) parts.add(lieu);
-                    if (!parts.isEmpty()) items.add("- " + String.join(" — ", parts));
+                    if (!parts.isEmpty()) {
+                        phrases.add(String.join(", ", parts));
+                    }
                 }
-                if (!items.isEmpty()) {
-                    String header = isEnglish ? "Awards and achievements of **Gear9**:" : "Distinctions et réalisations de **Gear9** :";
-                    return header + "\n" + String.join("\n", items);
+                if (!phrases.isEmpty()) {
+                    String lead;
+                    if (fromYear != null) {
+                        lead = isEnglish ? ("Awards and achievements since " + fromYear + " include ")
+                                : ("Depuis " + fromYear + ", parmi les distinctions, citons ");
+                    } else {
+                        lead = isEnglish ? "Recent awards and achievements include " : "Parmi les distinctions récentes, citons ";
+                    }
+                    return ensureEnglish(lead + joinWithAnd(phrases, isEnglish) + ".", isEnglish);
                 }
             }
             return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
@@ -297,28 +349,25 @@ public class CompanyQaService {
                     }
                 }
                 if (!items.isEmpty()) {
-                    // keep answer concise
-                    if (items.size() > 6) {
-                        items = items.subList(0, 6);
-                    }
-                    String header = isEnglish ? "Clients of **Gear9** and their projects" : "Quelques clients/projets de **Gear9**";
-                    if (secteurFilter != null) header += isEnglish ? " (sector: " + secteurFilter + ")" : " (secteur: " + secteurFilter + ")";
-                    header += isEnglish ? ":\n" : " :\n";
-                    return header + String.join("\n", items);
+                    if (items.size() > 4) items = items.subList(0, 4);
+                    String lead = isEnglish ? "Some client projects include " : "Parmi nos projets clients, citons ";
+                    String sentence = lead + joinWithAnd(stripBullets(items), isEnglish) + ".";
+                    return ensureEnglish(sentence, isEnglish);
                 }
             }
             return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
         }
 
-        // 8) Expertises principales
+        // 8) Expertises principales ("What is the expertise of Gear9?")
         if (containsAny(question, "expertise principale", "expertises principales", "compétence principale", "competence principale",
-                "core expertise", "main expertise", "primary expertise")) {
+                "what is the expertise of gear9", "what is the expertise of", "what is your expertise",
+                "expertise", "expertises", "core expertise", "main expertise", "primary expertise")) {
             JsonNode ex = data.path("expertise_principale");
             if (ex.isArray() && ex.size() > 0) {
                 List<String> items = new ArrayList<>();
                 for (JsonNode e : ex) {
-                    String nom = textOrNull(e.path("nom"));
-                    String description = textOrNull(e.path("description"));
+                    String nom = textOrNullLang(e, "nom", isEnglish);
+                    String description = textOrNullLang(e, "description", isEnglish);
                     if (nom != null && description != null) {
                         items.add("- **" + nom + "**: " + description);
                     } else if (nom != null) {
@@ -326,8 +375,13 @@ public class CompanyQaService {
                     }
                 }
                 if (!items.isEmpty()) {
-                    String header = isEnglish ? "Main expertises of **Gear9**:" : "Expertises principales de **Gear9** :";
-                    return header + "\n" + String.join("\n", items);
+                    List<String> phrases = new ArrayList<>();
+                    for (String it : items) {
+                        String cleaned = it.replaceFirst("^- \\*\\*(.*?)\\*\\*: ", "$1: ");
+                        phrases.add(cleaned);
+                    }
+                    String lead = isEnglish ? "Our main expertises include " : "Nos expertises principales incluent ";
+                    return ensureEnglish(lead + joinWithAnd(phrases, isEnglish) + ".", isEnglish);
                 }
             }
             return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
@@ -338,9 +392,49 @@ public class CompanyQaService {
         if (expertise.isArray()) {
             // Select which expertise group
             String groupId = null;
-            if (containsAny(question, "salesforce", "sales cloud", "service cloud", "marketing cloud", "data cloud", "mulesoft", "tableau")) groupId = "salesforce";
-            else if (containsAny(question, "régie", "regie")) groupId = "regie";
-            else if (containsAny(question, "digital")) groupId = "digital";
+            boolean mentionsSalesforce = containsAny(question, "salesforce", "sales cloud", "service cloud", "marketing cloud", "data cloud", "mulesoft", "tableau");
+            boolean mentionsRegie = containsAny(question, "régie", "regie", "staff augmentation");
+            boolean mentionsDigital = containsAny(question, "digital");
+            if (mentionsSalesforce) groupId = "salesforce";
+            else if (mentionsRegie) groupId = "regie";
+            else if (mentionsDigital) groupId = "digital";
+
+            // If no specific group mentioned but the user asked about expertise in general, summarize ALL groups
+            if (groupId == null && containsAny(question, "expertise", "expertises")) {
+                List<String> groupSummaries = new ArrayList<>();
+                for (JsonNode g : expertise) {
+                    String gid = textOrNull(g.path("id"));
+                    String gname = textOrNull(g.path("nom"));
+                    JsonNode details = g.path("details");
+                    if (!details.isArray() || details.size() == 0) continue;
+                    List<String> names = new ArrayList<>();
+                    int added = 0;
+                    for (JsonNode d : details) {
+                        String nom = textOrNull(d.path("nom"));
+                        if (nom != null) {
+                            names.add(nom);
+                            added++;
+                            if (added >= 5) break;
+                        }
+                    }
+                    if (!names.isEmpty()) {
+                        String label;
+                        if ("salesforce".equalsIgnoreCase(gid)) label = isEnglish ? "Salesforce" : "Salesforce";
+                        else if ("regie".equalsIgnoreCase(gid)) label = isEnglish ? "staff augmentation" : "régie";
+                        else if ("digital".equalsIgnoreCase(gid)) label = isEnglish ? "digital" : "digital";
+                        else label = (gname != null ? gname : (isEnglish ? "expertise" : "expertise"));
+                        String sentence = (isEnglish
+                                ? (label + ": " + joinWithAnd(names, true))
+                                : (label + " : " + joinWithAnd(names, false))
+                        );
+                        groupSummaries.add(sentence);
+                    }
+                }
+                if (!groupSummaries.isEmpty()) {
+                    String lead = isEnglish ? "Our expertises cover " : "Nos expertises couvrent ";
+                    return lead + joinWithAnd(groupSummaries, isEnglish) + ".";
+                }
+            }
 
             JsonNode group = null;
             if (groupId != null) {
@@ -356,8 +450,8 @@ public class CompanyQaService {
                 if (details.isArray() && details.size() > 0) {
                     List<String> items = new ArrayList<>();
                     for (JsonNode d : details) {
-                        String nom = textOrNull(d.path("nom"));
-                        String description = textOrNull(d.path("description"));
+                        String nom = textOrNullLang(d, "nom", isEnglish);
+                        String description = textOrNullLang(d, "description", isEnglish);
                         if (nom != null && description != null) {
                             items.add("- **" + nom + "**: " + description);
                         } else if (nom != null) {
@@ -365,12 +459,17 @@ public class CompanyQaService {
                         }
                     }
                     if (!items.isEmpty()) {
+                        List<String> phrases = new ArrayList<>();
+                        for (String it : items) {
+                            String cleaned = it.replaceFirst("^- \\*\\*(.*?)\\*\\*: ", "$1: ");
+                            phrases.add(cleaned);
+                        }
                         String label = "cette expertise";
                         if ("salesforce".equals(groupId)) label = isEnglish ? "Salesforce" : "Salesforce";
-                        else if ("regie".equals(groupId)) label = isEnglish ? "Staff augmentation" : "Régie";
-                        else if ("digital".equals(groupId)) label = isEnglish ? "Digital" : "Digital";
-                        String header = isEnglish ? "Details of **Gear9**'s " + label + " expertise:" : "Détails de l'expertise " + label + " de **Gear9** :";
-                        return header + "\n" + String.join("\n", items);
+                        else if ("regie".equals(groupId)) label = isEnglish ? "staff augmentation" : "régie";
+                        else if ("digital".equals(groupId)) label = isEnglish ? "digital" : "digital";
+                        String lead = isEnglish ? ("Details of our " + label + " expertise include ") : ("Parmi les détails de notre expertise " + label + ", on retrouve ");
+                        return ensureEnglish(lead + joinWithAnd(phrases, isEnglish) + ".", isEnglish);
                     }
                 }
             }
@@ -387,6 +486,93 @@ public class CompanyQaService {
 
         // Default: unknown within company scope
         return isEnglish ? "I'm sorry, I don't have information on this." : "Je suis désolé, je ne trouve pas d'information à ce sujet.";
+    }
+
+    private String tryAliasMatch(String normalizedQuestion, boolean isEnglish) {
+        if (root == null) return null;
+        JsonNode subjects = root.path("data").path("subjects");
+        if (subjects.isMissingNode()) return null;
+
+        // Default description fallback if matching generic subjects
+        String defaultFr = textOrNull(root.path("data").path("apercu"));
+        String defaultEn = null;
+        if (defaultFr != null) {
+            defaultEn = "Gear9 is a Moroccan digital transformation agency founded in 2019. We specialize in implementing digital culture, creating unique and engaging digital experiences, and using technology and data to drive business growth. We operate with an agile and innovative methodology, focusing on areas such as Digital Culture and Transformation, Product Thinking, Customer Experience and Automation, as well as Behavioral Analysis.";
+        }
+
+        // Iterate keys
+        subjects.fieldNames().forEachRemaining(key -> {}); // touch iterator for compatibility
+        for (java.util.Iterator<String> it = subjects.fieldNames(); it.hasNext();) {
+            String key = it.next();
+            JsonNode node = subjects.path(key);
+            JsonNode aliases = node.path("aliases");
+            if (aliases.isArray()) {
+                for (JsonNode a : aliases) {
+                    String alias = normalize(textOrNull(a));
+                    if (alias != null && !alias.isEmpty() && normalizedQuestion.contains(alias)) {
+                        // 0) If the subject provides a custom localized answer, prefer it.
+                        // If the question looks English, serve EN even if current convo language is FR.
+                        boolean looksEnglish = detectEnglish(normalizedQuestion);
+                        String localized = textOrNull(node.path((isEnglish || looksEnglish) ? "answer_en" : "answer_fr"));
+                        if (localized != null && !localized.isBlank()) {
+                            return localized;
+                        }
+                        // 1) Map some keys to known answers using existing logic
+                        switch (key) {
+                            case "about": {
+                                // If a specific topic is present (e.g., Salesforce, Digital, Régie),
+                                // do not short-circuit to the generic description.
+                                boolean hasSpecific = normalizedQuestion.contains("salesforce")
+                                        || normalizedQuestion.contains("sales cloud")
+                                        || normalizedQuestion.contains("service cloud")
+                                        || normalizedQuestion.contains("marketing cloud")
+                                        || normalizedQuestion.contains("data cloud")
+                                        || normalizedQuestion.contains("mulesoft")
+                                        || normalizedQuestion.contains("tableau")
+                                        || normalizedQuestion.contains("digital")
+                                        || normalizedQuestion.contains("product thinking")
+                                        || normalizedQuestion.contains("customer experience")
+                                        || normalizedQuestion.contains("automation")
+                                        || normalizedQuestion.contains("régie")
+                                        || normalizedQuestion.contains("regie")
+                                        || normalizedQuestion.contains("staff augmentation");
+                                if (!hasSpecific) {
+                                    return isEnglish ? defaultEn : defaultFr;
+                                }
+                                // Let more specific alias handlers decide
+                                break;
+                            }
+                            case "address":
+                                return (isEnglish ? "Address of **Gear9**:\n" : "Adresse de **Gear9**:\n") + textOrNull(root.path("data").path("adresse"));
+                            case "services":
+                                return answer("services", isEnglish); // fall back to existing branch via keyword
+                            case "clients":
+                                return answer("clients", isEnglish);
+                            case "awards":
+                                return answer("awards", isEnglish);
+                            case "leadership":
+                                return answer("ceo", isEnglish);
+                            case "expertise":
+                                return answer("expertise", isEnglish);
+                            case "salesforce":
+                                return answer("salesforce expertise", isEnglish);
+                            case "digital":
+                                return answer("digital expertise", isEnglish);
+                            default:
+                                return isEnglish ? defaultEn : defaultFr;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private String normalize(String s) {
+        if (s == null) return "";
+        String lower = s.toLowerCase(Locale.ROOT).trim();
+        String nfd = java.text.Normalizer.normalize(lower, java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
 
@@ -498,6 +684,52 @@ public class CompanyQaService {
         return false;
     }
 
+    // Word-boundary contains for single words (handles accents too)
+    private boolean containsAnyWord(String haystack, String... words) {
+        if (haystack == null) return false;
+        for (String w : words) {
+            if (w == null || w.isEmpty()) continue;
+            // Build a regex that approximates word boundaries for ASCII and accented letters
+            String regex = "(?<![a-záàâäãåçéèêëíìîïñóòôöõúùûüýÿ])" + Pattern.quote(w) + "(?![a-záàâäãåçéèêëíìîïñóòôöõúùûüýÿ])";
+            if (Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(haystack).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String joinWithAnd(List<String> items, boolean isEnglish) {
+        if (items == null || items.isEmpty()) return "";
+        if (items.size() == 1) return items.get(0);
+        if (items.size() == 2) return items.get(0) + (isEnglish ? " and " : " et ") + items.get(1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(", ");
+            if (i == items.size() - 1) sb.append(isEnglish ? "and " : "et ");
+            sb.append(items.get(i));
+        }
+        return sb.toString();
+    }
+
+    private String ensureEnglish(String text, boolean isEnglish) {
+        // Return immediately to avoid network calls that slow down deterministic answers.
+        return text;
+    }
+
+    private List<String> stripBullets(List<String> bulletLines) {
+        List<String> result = new ArrayList<>();
+        if (bulletLines == null) return result;
+        for (String s : bulletLines) {
+            String t = s.trim();
+            if (t.startsWith("- ")) t = t.substring(2).trim();
+            t = t.replace("**", "");
+            result.add(t);
+        }
+        return result;
+    }
+
+    // removed bilingual helpers to restore original behavior
+
     private boolean isIdentityQuery(String q) {
         if (q == null) return false;
         String s = q.trim();
@@ -513,16 +745,7 @@ public class CompanyQaService {
         }
         // Heuristic: contains who + you and either are/r
         if (s.contains("who") && s.contains("you") && (s.contains(" are ") || s.contains(" r "))) return true;
-        return false;
-    }
-
-    private String ensureLanguage(String text, boolean isEnglish) {
-        try {
-            return geminiService.translate(text, isEnglish ? "en" : "fr");
-        } catch (Exception e) {
-            // If translation fails, return the original text
-            return text;
-        }
+         return false;
     }
 
     private boolean isLikelyGreetingOnly(String question) {
@@ -610,6 +833,109 @@ public class CompanyQaService {
 
         return null;
     }
+
+    // Extract a 4-digit year from the question (e.g., 2023). Returns null if none found or out of range.
+    private Integer extractYear(String text) {
+        if (text == null) return null;
+        Matcher m = Pattern.compile("(?<!\\d)(19\\d{2}|20\\d{2})(?!\\d)").matcher(text);
+        if (m.find()) {
+            try {
+                int y = Integer.parseInt(m.group(1));
+                if (y >= 1900 && y <= 2100) return y;
+            } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    // Subjects for autocomplete (company basics, services, expertise, projects, awards, leadership)
+    public List<String> getSubjects() {
+        Set<String> subjects = new LinkedHashSet<>();
+        if (root == null) return new ArrayList<>(subjects);
+        JsonNode data = root.path("data");
+        if (data.isMissingNode()) return new ArrayList<>(subjects);
+
+        // Company basics
+        String nom = textOrNull(data.path("nom_entreprise"));
+        if (nom != null) subjects.add(nom);
+        if (textOrNull(data.path("adresse")) != null) subjects.add("Adresse");
+        if (textOrNull(data.path("apropos")) != null) subjects.add("À propos");
+
+        // Services
+        JsonNode services = data.path("services");
+        if (services.isArray()) {
+            for (JsonNode s : services) {
+                String n = textOrNull(s.path("nom"));
+                String ne = textOrNull(s.path("nom_en"));
+                String c = textOrNull(s.path("categorie"));
+                if (n != null) subjects.add(n);
+                if (ne != null) subjects.add(ne);
+                if (c != null) subjects.add(c);
+            }
+        }
+
+        // Expertise principale
+        JsonNode exMain = data.path("expertise_principale");
+        if (exMain.isArray()) {
+            for (JsonNode e : exMain) {
+                String n = textOrNull(e.path("nom"));
+                String cat = textOrNull(e.path("categorie"));
+                if (n != null) subjects.add(n);
+                if (cat != null) subjects.add(cat);
+            }
+        }
+
+        // Expertise groups and details
+        JsonNode ex = data.path("expertise");
+        if (ex.isArray()) {
+            for (JsonNode g : ex) {
+                String gname = textOrNull(g.path("nom"));
+                if (gname != null) subjects.add(gname);
+                JsonNode details = g.path("details");
+                if (details.isArray()) {
+                    for (JsonNode d : details) {
+                        String dn = textOrNull(d.path("nom"));
+                        if (dn != null) subjects.add(dn);
+                    }
+                }
+            }
+        }
+
+        // Projects: sectors, names, types
+        JsonNode projets = data.path("projets");
+        if (projets.isArray()) {
+            for (JsonNode p : projets) {
+                String secteur = textOrNull(p.path("secteur"));
+                String pn = textOrNull(p.path("nom"));
+                String type = textOrNull(p.path("type"));
+                String typeEn = textOrNull(p.path("type_en"));
+                if (secteur != null) subjects.add(secteur);
+                if (pn != null) subjects.add(pn);
+                if (type != null) subjects.add(type);
+                if (typeEn != null) subjects.add(typeEn);
+            }
+        }
+
+        // Awards titles
+        JsonNode rr = data.path("realisations_et_recompenses");
+        if (rr.isArray()) {
+            for (JsonNode r : rr) {
+                String t = textOrNull(r.path("titre"));
+                if (t != null) subjects.add(t);
+            }
+        }
+
+        // Leadership roles
+        JsonNode direction = data.path("direction");
+        if (direction.isArray()) {
+            for (JsonNode d : direction) {
+                String role = textOrNull(d.path("role"));
+                if (role != null) subjects.add(role);
+            }
+        }
+
+        return new ArrayList<>(subjects);
+    }
 }
+
 
 

@@ -1,6 +1,13 @@
 {
   "success": true,
   "data": {
+    "subjects": {
+      "salesforce": {
+        "aliases": ["salesforce", "sales cloud", "service cloud", "marketing cloud", "data cloud", "mulesoft", "tableau"],
+        "answer_en": "Gear9’s Salesforce expertise covers Sales Cloud, Service Cloud, Marketing Cloud, Data Cloud, MuleSoft, and Tableau. We design, implement, and scale CRM, integrations, and analytics to accelerate growth.",
+        "answer_fr": "L’expertise Salesforce de Gear9 couvre Sales Cloud, Service Cloud, Marketing Cloud, Data Cloud, MuleSoft et Tableau. Nous concevons, implémentons et faisons évoluer CRM, intégrations et analytics pour accélérer la croissance."
+      }
+    },
     "nom_entreprise": "Agence de Transformation Digitale Gear9",
     "apropos": "Régie Salesforce Digital",
     "adresse": "219 Bd Zerktouni, angle Bd Brahim Roudani, Casablanca",

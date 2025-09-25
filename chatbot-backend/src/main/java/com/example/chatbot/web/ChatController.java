@@ -27,24 +27,23 @@ public class ChatController {
     public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
         String userMsg = request.getMessage();
         String conversationId = request.getConversationId();
+        String preferredLanguage = request.getLanguage();
         
-        
-        String conversationLanguage = conversationSessionService.detectLanguageForMessage(userMsg);
-        
-        conversationSessionService.detectAndStoreLanguage(conversationId, userMsg);
+    
+        String conversationLanguage;
+        if (preferredLanguage != null && ("en".equalsIgnoreCase(preferredLanguage) || "fr".equalsIgnoreCase(preferredLanguage))) {
+            conversationLanguage = preferredLanguage.toLowerCase();
+            // Persist the chosen language for this conversation so subsequent turns are consistent
+            conversationSessionService.setConversationLanguage(conversationId, conversationLanguage);
+        } else {
+            conversationLanguage = conversationSessionService.detectLanguageForMessage(userMsg);
+            conversationSessionService.detectAndStoreLanguage(conversationId, userMsg);
+        }
         boolean isEnglish = "en".equals(conversationLanguage);
         
-        // 1) Try direct deterministic answer from JSON (this should work without Gemini API)
+        // 1) Try direct deterministic answer from JSON 
         String direct = companyQaService.answer(userMsg, isEnglish);
         if (direct != null && !direct.startsWith("Je suis désolé") && !direct.startsWith("I'm sorry")) {
-            // Identity quick-fix to ensure exact phrasing in the user's language
-            if (!isEnglish && direct.toLowerCase().contains("assistant")) {
-                direct = "Je suis l'assistant de **Gear9**, là pour vous aider avec toutes les informations dont vous avez besoin sur **Gear9**.";
-                return new ChatResponse(direct);
-            } else if (isEnglish && direct.toLowerCase().contains("assistant")) {
-                direct = "I am **Gear9**'s assistant, here to help you with any information you need about **Gear9**.";
-                return new ChatResponse(direct);
-            }
             return new ChatResponse(direct);
         }
         
@@ -96,4 +95,10 @@ public class ChatController {
         // If no basic response matches, return null to try Gemini API
         return null;
     }
-}
+    
+  @GetMapping(path = "/subjects", produces = MediaType.APPLICATION_JSON_VALUE)
+  public java.util.List<String> subjects() {
+    return companyQaService.getSubjects();
+  }
+  
+ }

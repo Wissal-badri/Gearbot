@@ -7,6 +7,7 @@ public class ChatRequest {
     private String message;
     
     private String conversationId;
+    private String language;
 
     public String getMessage() {
         return message;
@@ -22,5 +23,13 @@ public class ChatRequest {
     
     public void setConversationId(String conversationId) {
         this.conversationId = conversationId;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 } 

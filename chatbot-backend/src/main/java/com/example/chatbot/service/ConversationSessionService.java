@@ -34,6 +34,15 @@ public class ConversationSessionService {
     }
     
     /**
+     * Force and store a language for the conversation ("en" or "fr").
+     */
+    public void setConversationLanguage(String conversationId, String fixedLanguage) {
+        if (conversationId == null || fixedLanguage == null) return;
+        String lang = ("en".equalsIgnoreCase(fixedLanguage)) ? "en" : "fr";
+        conversationLanguages.put(conversationId, lang);
+    }
+    
+    /**
      * Get the stored language for a conversation
      * @param conversationId The conversation identifier
      * @return The language ("en" for English, "fr" for French), defaults to "fr"
